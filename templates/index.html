@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Masters Medal Standings</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <style>
+        body {
+            background: url('https://images.unsplash.com/photo-1508182316650-6d8e3e3f5be7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80') no-repeat center center fixed;
+            background-size: cover;
+            color: #fff;
+            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .overlay {
+            background: rgba(0, 0, 64, 0.7);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 1s ease-in;
+        }
+        h1 {
+            font-size: 3rem;
+            text-align: center;
+            color: #00b7eb;
+            text-shadow: 2px 2px 6px rgba(0, 183, 235, 0.7);
+            margin-bottom: 2rem;
+        }
+        .form-control {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+        .form-control::placeholder {
+            color: #b3e5fc;
+        }
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 15px #00b7eb;
+            border-color: #00b7eb;
+        }
+        .btn-primary {
+            background: #00b7eb;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background: #0099cc;
+            transform: scale(1.05);
+        }
+        .alert-danger {
+            background: #ff4d4d;
+            color: #fff;
+            border-radius: 10px;
+            animation: shake 0.5s;
+        }
+        .table {
+            background: rgba(0, 0, 64, 0.8);
+            color: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .table th {
+            background: #00b7eb;
+            color: #fff;
+        }
+        .table td {
+            transition: background 0.3s ease;
+        }
+        .table tr:hover td {
+            background: rgba(0, 183, 235, 0.3);
+        }
+        .spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        .spinner.show {
+            display: block;
+            animation: spin 1s linear infinite;
+        }
+        .filter-group {
+            margin-bottom: 1rem;
+        }
+        @keyframes spin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay">
+        <div class="container mt-4">
+            <h1>🏊‍♂️ Masters Medal Standings</h1>
+            <form method="POST" id="analysisForm">
+                <div class="mb-3 position-relative">
+                    <input type="text" name="url" class="form-control" placeholder="Enter results URL (e.g., https://www.esf-eg.org/images/results/masters/2025/results/)" required>
+                    <div class="spinner" id="loadingSpinner">
+                        <div class="spinner-border text-info" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Analyze</button>
+            </form>
+
+            {% if error %}
+                <div class="alert alert-danger mt-3 animate__animated animate__shakeX">{{ error }}</div>
+            {% endif %}
+
+            {% if total_standings is not none and not total_standings.empty %}
+                <h2 class="mt-4 text-center animate__animated animate__fadeInUp">Overall Medal Standings</h2>
+                <div class="filter-group">
+                    <select id="totalSort" class="form-select" onchange="sortTable('totalTable', this.value)">
+                        <option value="Total">Sort by Total</option>
+                        <option value="Gold">Sort by Gold</option>
+                        <option value="Silver">Sort by Silver</option>
+                        <option value="Bronze">Sort by Bronze</option>
+                    </select>
+                </div>
+                <table class="table table-bordered" id="totalTable">
+                    <thead>
+                        <tr>
+                            <th>Age Group</th>
+                            <th>Club</th>
+                            <th>Gold 🥇</th>
+                            <th>Silver 🥈</th>
+                            <th>Bronze 🥉</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for _, row in total_standings.iterrows() %}
+                            <tr>
+                                <td>{{ row['age_group'] }}</td>
+                                <td>{{ row['club'] }}</td>
+                                <td>{{ row.get('Gold', 0) }}</td>
+                                <td>{{ row.get('Silver', 0) }}</td>
+                                <td>{{ row.get('Bronze', 0) }}</td>
+                                <td>{{ row['Total'] }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+
+            {% if male_standings is not none and not male_standings.empty %}
+                <h2 class="mt-4 text-center animate__animated animate__fadeInUp">Male Medal Standings</h2>
+                <div class="filter-group">
+                    <select id="maleFilter" class="form-select" onchange="filterTable('maleTable', this.value)">
+                        <option value="">All Age Groups</option>
+                        {% for age_group in male_standings['age_group'].unique() %}
+                            <option value="{{ age_group }}">{{ age_group }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="maleSort" class="form-select" onchange="sortTable('maleTable', this.value)">
+                        <option value="Total">Sort by Total</option>
+                        <option value="Gold">Sort by Gold</option>
+                        <option value="Silver">Sort by Silver</option>
+                        <option value="Bronze">Sort by Bronze</option>
+                    </select>
+                </div>
+                <table class="table table-bordered" id="maleTable">
+                    <thead>
+                        <tr>
+                            <th>Age Group</th>
+                            <th>Club</th>
+                            <th>Gold 🥇</th>
+                            <th>Silver 🥈</th>
+                            <th>Bronze 🥉</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for _, row in male_standings.iterrows() %}
+                            <tr>
+                                <td>{{ row['age_group'] }}</td>
+                                <td>{{ row['club'] }}</td>
+                                <td>{{ row.get('Gold', 0) }}</td>
+                                <td>{{ row.get('Silver', 0) }}</td>
+                                <td>{{ row.get('Bronze', 0) }}</td>
+                                <td>{{ row['Total'] }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+
+            {% if female_standings is not none and not female_standings.empty %}
+                <h2 class="mt-4 text-center animate__animated animate__fadeInUp">Female Medal Standings</h2>
+                <div class="filter-group">
+                    <select id="femaleFilter" class="form-select" onchange="filterTable('femaleTable', this.value)">
+                        <option value="">All Age Groups</option>
+                        {% for age_group in female_standings['age_group'].unique() %}
+                            <option value="{{ age_group }}">{{ age_group }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="femaleSort" class="form-select" onchange="sortTable('femaleTable', this.value)">
+                        <option value="Total">Sort by Total</option>
+                        <option value="Gold">Sort by Gold</option>
+                        <option value="Silver">Sort by Silver</option>
+                        <option value="Bronze">Sort by Bronze</option>
+                    </select>
+                </div>
+                <table class="table table-bordered" id="femaleTable">
+                    <thead>
+                        <tr>
+                            <th>Age Group</th>
+                            <th>Club</th>
+                            <th>Gold 🥇</th>
+                            <th>Silver 🥈</th>
+                            <th>Bronze 🥉</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for _, row in female_standings.iterrows() %}
+                            <tr>
+                                <td>{{ row['age_group'] }}</td>
+                                <td>{{ row['club'] }}</td>
+                                <td>{{ row.get('Gold', 0) }}</td>
+                                <td>{{ row.get('Silver', 0) }}</td>
+                                <td>{{ row.get('Bronze', 0) }}</td>
+                                <td>{{ row['Total'] }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('analysisForm').addEventListener('submit', function(e) {
+            const spinner = document.getElementById('loadingSpinner');
+            spinner.classList.add('show');
+            // Simulate loading delay (remove in production if not needed)
+            setTimeout(() => spinner.classList.remove('show'), 1000);
+        });
+
+        function filterTable(tableId, filterValue) {
+            const table = document.getElementById(tableId);
+            const tr = table.getElementsByTagName('tr');
+            for (let i = 1; i < tr.length; i++) {
+                const td = tr[i].getElementsByTagName('td')[0];
+                if (td) {
+                    const txtValue = td.textContent || td.innerText;
+                    tr[i].style.display = filterValue === '' || txtValue === filterValue ? '' : 'none';
+                }
+            }
+        }
+
+        function sortTable(tableId, sortBy) {
+            const table = document.getElementById(tableId);
+            const tbody = table.getElementsByTagName('tbody')[0];
+            const rows = Array.from(tbody.getElementsByTagName('tr'));
+
+            rows.sort((a, b) => {
+                const aValue = parseInt(a.getElementsByTagName('td')[{Total: 5, Gold: 2, Silver: 3, Bronze: 4}[sortBy]].textContent);
+                const bValue = parseInt(b.getElementsByTagName('td')[{Total: 5, Gold: 2, Silver: 3, Bronze: 4}[sortBy]].textContent);
+                return bValue - aValue;
+            });
+
+            while (tbody.firstChild) tbody.removeChild(tbody.firstChild);
+            rows.forEach(row => tbody.appendChild(row));
+        }
+    </script>
+</body>
+</html>
